@@ -2,52 +2,59 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { abi, contractAddress } from '@/constants';
 
-import { useAccount } from 'wagmi'
-import { readContract, prepareWriteContract, writeContract } from '@wagmi/core'
+import { useAccount } from 'wagmi';
+import { readContract, prepareWriteContract, writeContract } from '@wagmi/core';
 
 import { useState } from 'react';
 
-export default function Home() {
+const Home = () => {
+  const [voterAddress, setVoterAddress] = useState(''); // State to store the entered address
+  const { address, isConnected } = useAccount();
 
-  // The State that will get the number on the blockchain (get method)
-  const [getNumber, setGetNumber] = useState()
-  // The State that will keep track of the user input (set method)
-  const [setNumber, setSetNumber] = useState()
-  // We get the address from rainbowkit and if the user is connected or not
-  const { address, isConnected } = useAccount()
 
-  const getTheNumber = async() => {
-    const data = await readContract({
-      address: contractAddress,
-      abi: abi,
-      functionName: 'retrieve',
-    })
-    setGetNumber(Number(data))
-  }
+  // Function to change the number on the smart contract
+  const registerVoter = async () => {
+    try {
+      const tx = await prepareWriteContract({
+        address: contractAddress,
+        abi,
+        functionName: 'registerVoter', // Replace with actual function name
+        args: [voterAddress], // Provide the number from user input
+      });
 
-  const changeNumber = async() => {
-    const { request } = await prepareWriteContract({
-      address: contractAddress,
-      abi: abi,
-      functionName: 'store',
-      args: [setNumber]
-    })
-    const { hash } = await writeContract(request)
-    await getTheNumber()
-    setSetNumber()
-  }
+      await writeContract(tx);
+      console.log('Voter added successfully!');
+      // Update UI to reflect the change (optional)
+    } catch (error) {
+      console.error('Error changing number:', error);
+      // Handle errors appropriately, e.g., display an error message to the user
+    }
+  };
 
   return (
     <>
       <ConnectButton />
       {isConnected ? (
         <div>
-          <p><button onClick={getTheNumber}>Get The Number</button> : {getNumber}</p>
-          <p><input type="number" onChange={(e) => setSetNumber(e.target.value)} /> <button onClick={changeNumber}>Change the number</button></p>
+          <p>
+            <input
+              type="text" // Adjust type if needed (e.g., "eth" for Ethereum addresses)
+              placeholder="Enter Voter Address"
+              value={voterAddress}
+              onChange={(e) => setVoterAddress(e.target.value)}
+            />
+          </p>
+          <p>
+            <button onClick={registerVoter} disabled={!voterAddress}>
+              Register Voter
+            </button>
+          </p>
         </div>
       ) : (
         <p>Please connect your Wallet to our DApp.</p>
       )}
     </>
-  )
-}
+  );
+};
+
+export default Home;
